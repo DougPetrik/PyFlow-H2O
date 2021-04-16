@@ -15,4 +15,14 @@ def read_config(parser_instance, setting, attribute):
     return config_parser.get(setting, attribute)
 
 
+class MainApplication(tk.Frame):
+    def __init__(self, parent,*args, **kwargs):
+        self.parent = parent
+        self.frame = tk.Frame.__init__(self, parent, *args, **kwargs)
+
+
+if __name__ == '__main__':
+    root = tk.Tk()
+    app = MainApplication(root).pack(side='top', fill='both', expand=True)
+    root.mainloop()
 
