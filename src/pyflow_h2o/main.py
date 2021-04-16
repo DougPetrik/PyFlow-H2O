@@ -51,7 +51,31 @@ class MainApplication(tk.Frame):
     def initUI(self):
         self.parent.title('PyFlow H2O')
         self.menubar = MenuBar(self.parent)
-        self.filemenu = self.menubar.add_menu('File',commands=[('Open', None)])
+
+        file_commands = [
+                        ('New Model', None),
+                        ('Open...', None),
+                        ('Quit', None)
+                        ]
+
+        edit_commands = [
+                        ('Undo', None),
+                        ('Redo', None)
+                        ]
+
+        view_commands = [
+                        ]
+
+        mode_commands = [
+                        ('Viewing Mode', None),
+                        ('Drawing Mode', None)
+                        ]
+
+        self.filemenu = self.menubar.add_menu('File', commands=file_commands)
+        self.editmenu = self.menubar.add_menu('Edit', commands=edit_commands)
+        self.viewmenu = self.menubar.add_menu('View', commands=view_commands)
+        self.modemenu = self.menubar.add_menu('Mode', commands=mode_commands)
+
 
 
 if __name__ == '__main__':
