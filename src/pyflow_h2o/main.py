@@ -22,13 +22,36 @@ class Main(tk.Frame):
         self.canvas = tk.Canvas(parent.frame, width=self.width, height=self.height)
 
 
+class MenuBar:
+    def __init__(self, parent):
+        self.parent = parent
+        self.menubar = tk.Menu(self.parent)
+        self.create()
+
+    def create(self):
+        self.parent.config(menu = self.menubar)
+
+    def add_menu(self, menuname, commands):
+        menu = tk.Menu(self.menubar, tearoff=0)
+
+        for command in commands:
+            menu.add_command(label = command[0], command= command[1])
+
+        self.menubar.add_cascade(label=menuname, menu=menu)
+
 class MainApplication(tk.Frame):
-    def __init__(self, parent,*args, **kwargs):
+    def __init__(self, parent, *args, **kwargs):
         self.parent = parent
         self.frame = tk.Frame.__init__(self, parent, *args, **kwargs)
 
         self.main  = Main(self)
         self.main.canvas.pack()
+        self.initUI()
+
+    def initUI(self):
+        self.parent.title('PyFlow H2O')
+        self.menubar = MenuBar(self.parent)
+        self.filemenu = self.menubar.add_menu('File',commands=[('Open', None)])
 
 
 if __name__ == '__main__':
