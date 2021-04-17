@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
+from tkinter.filedialog import asksaveasfilename
 import os
 import sys
 import sqlite3
@@ -84,9 +85,11 @@ class Model:
         self.create_table(sql_create_nodes_table)
 
     def create_table(self, create_table_sql):
+        ''' adds table to open database / model '''
         try:
             cursor = self.db.cursor()
             cursor.execute(create_table_sql)
+            c.commit()
         except:
             pass
 
@@ -139,6 +142,19 @@ class MainApplication(tk.Frame):
 
 
 
+    def save_as(self):
+        ''' write current model to disk '''
+        # TODO: add check if database is not saved
+        files = [('PyFlow H2O model','*.pfh'),
+                 ('All Files', '*.*')]
+        saveas_file = asksaveasfilename(filetypes = files, defaultextension = files)
+        conn = sqlite3.connect(saveas_file)
+        with conn:
+            for line in self.model.db.iterdump():
+                if line not in ('BEGIN;', 'COMMIT;'): # let python handle transactions
+                    conn.execute(line)
+        conn.commit()
+
 
     def initUI(self):
         ''' Initializes main window title and menu bar'''
@@ -149,6 +165,7 @@ class MainApplication(tk.Frame):
         file_commands = [
                         ('New Model', None),
                         ('Open...', None),
+                        ('Save as...', self.save_as),
                         ('Quit', on_closing)
                         ]
 
