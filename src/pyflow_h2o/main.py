@@ -62,9 +62,26 @@ class Model:
                                  );
                                  """
 
+        sql_create_nodes_table = """
+                                 CREATE TABLE IF NOT EXISTS nodes (
+                                 id integer PRIMARY KEY,
+                                 node_name text,
+                                 attr1 text,
+                                 attr2 text,
+                                 attr3 text,
+                                 attr4 text,
+                                 attr5 text,
+                                 pressure real,
+                                 head real,
+                                 head_known integer,
+                                 inflow real,
+                                 inflow_known integer
+                                 );
+                                 """
 
 
         self.create_table(sql_create_pipes_table)
+        self.create_table(sql_create_nodes_table)
 
     def create_table(self, create_table_sql):
         try:
