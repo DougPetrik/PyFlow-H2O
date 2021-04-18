@@ -28,6 +28,7 @@ def read_config(parser_instance, setting, attribute):
 class Model:
     def __init__(self, parent, filepath):
         self.parent = parent
+        self.mode = 'View'
 
         if filepath == None:
             self.filepath = None
@@ -60,7 +61,11 @@ class Model:
                                  nominal_diameter integer,
                                  internal_diameter real,
                                  flow real,
-                                 flow_direction integer
+                                 flow_direction integer,
+                                 v real,
+                                 Re real,
+                                 f real,
+                                 n_exp real
                                  );
                                  """
 
@@ -77,10 +82,11 @@ class Model:
                                  head real,
                                  head_known integer,
                                  inflow real,
-                                 inflow_known integer
+                                 inflow_known integer,
+                                 x real,
+                                 y real
                                  );
                                  """
-
 
         self.create_table(sql_create_pipes_table)
         self.create_table(sql_create_nodes_table)
@@ -90,7 +96,7 @@ class Model:
         try:
             cursor = self.db.cursor()
             cursor.execute(create_table_sql)
-            c.commit()
+            self.db.commit()
         except:
             pass
 
@@ -122,6 +128,13 @@ class MenuBar:
 
         self.menubar.add_cascade(label=menuname, menu=menu)
 
+class Button:
+    def __init__(self, parent):
+        self.parent = parent
+        self.create()
+
+    def create(self):
+        self.button = tk.Button(self.parent.frame, text='Hello')
 
 class MainApplication(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
@@ -136,10 +149,7 @@ class MainApplication(tk.Frame):
             self.model = Model(self, None)
 
         # create canvas
-        self.main  = Main(self)
-        self.main.canvas.pack()
         self.initUI()
-        #self.initModel(self.model_path)
 
     def save(self, save_type):
         ''' write the current model to disk '''
@@ -190,14 +200,26 @@ class MainApplication(tk.Frame):
                         ]
 
         mode_commands = [
-                        ('Viewing Mode', None),
-                        ('Drawing Mode', None)
+                        ('View/Select', None),
+                        ('Draw Nodes', None),
+                        ('Draw Pipes', None),
+                        ('Draw Valves', None),
+                        ('Draw Pumps', None)
                         ]
 
         self.filemenu = self.menubar.add_menu('File', commands=file_commands)
         self.editmenu = self.menubar.add_menu('Edit', commands=edit_commands)
         self.viewmenu = self.menubar.add_menu('View', commands=view_commands)
         self.modemenu = self.menubar.add_menu('Mode', commands=mode_commands)
+
+        # create quick button menu for testing
+        self.button = Button(self)
+        self.button.button.pack(side='left', anchor='nw')
+
+        # create canvas
+        self.main = Main(self)
+        self.main.canvas.pack()
+
 
 
 def on_closing():
