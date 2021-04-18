@@ -165,7 +165,6 @@ class MainApplication(tk.Frame):
                         conn.execute(line)
             conn.commit()
             self.model.filepath = saveas_file
-            print('Saved!')
 
 
     def initUI(self):
