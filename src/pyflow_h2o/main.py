@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from tkinter.filedialog import asksaveasfilename
+from functools import partial
 import os
 import sys
 import sqlite3
@@ -29,14 +30,14 @@ class Model:
         self.parent = parent
 
         if filepath == None:
-            self.model_path = None
+            self.filepath = None
             self.open_db(":memory:")
             self.new_db()
         elif os.path.exists(filepath):
-            self.model_path = filepath
+            self.filepath = filepath
             self.open_db(filepath)
         else:
-            self.model_path = None
+            self.filepath = None
             self.open_db(":memory:")
             self.new_db()
 
@@ -140,20 +141,31 @@ class MainApplication(tk.Frame):
         self.initUI()
         #self.initModel(self.model_path)
 
-
-
-    def save_as(self):
-        ''' write current model to disk '''
+    def save(self, save_type):
+        ''' write the current model to disk '''
         # TODO: add check if database is not saved
         files = [('PyFlow H2O model','*.pfh'),
                  ('All Files', '*.*')]
-        saveas_file = asksaveasfilename(filetypes = files, defaultextension = files)
-        conn = sqlite3.connect(saveas_file)
-        with conn:
-            for line in self.model.db.iterdump():
-                if line not in ('BEGIN;', 'COMMIT;'): # let python handle transactions
-                    conn.execute(line)
-        conn.commit()
+        if save_type == 'SAVE':
+            if self.model.filepath is None:
+                saveas_file = asksaveasfilename(filetypes=files, defaultextension=files)
+            else:
+                saveas_file = self.model.filepath
+        elif save_type == 'SAVE_AS':
+            saveas_file = asksaveasfilename(filetypes=files, defaultextension=files)
+
+
+        if saveas_file != '': # if user did not cancel the save as function
+            if os.path.exists(saveas_file): # delete existing file
+                os.remove(saveas_file)
+            conn = sqlite3.connect(saveas_file)
+            with conn:
+                for line in self.model.db.iterdump():
+                    if line not in ('BEGIN;', 'COMMIT;'): # let python handle transactions
+                        conn.execute(line)
+            conn.commit()
+            self.model.filepath = saveas_file
+            print('Saved!')
 
 
     def initUI(self):
@@ -165,7 +177,8 @@ class MainApplication(tk.Frame):
         file_commands = [
                         ('New Model', None),
                         ('Open...', None),
-                        ('Save as...', self.save_as),
+                        ('Save', partial(self.save, 'SAVE')),
+                        ('Save as...', partial(self.save, 'SAVE_AS')),
                         ('Quit', on_closing)
                         ]
 
