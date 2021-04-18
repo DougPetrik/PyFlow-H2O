@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 from tkinter.filedialog import asksaveasfilename
+from tkinter.filedialog import askopenfilename
 from functools import partial
 import os
 import sys
@@ -36,7 +37,8 @@ class Model:
             self.new_db()
         elif os.path.exists(filepath):
             self.filepath = filepath
-            self.open_db(filepath)
+            self.open_db(self.filepath)
+            self.load_model() # TODO: verify if this is working
         else:
             self.filepath = None
             self.open_db(":memory:")
@@ -60,6 +62,7 @@ class Model:
                                  attr5 text,
                                  nominal_diameter integer,
                                  internal_diameter real,
+                                 length real,
                                  flow real,
                                  flow_direction integer,
                                  v real,
@@ -97,8 +100,68 @@ class Model:
             cursor = self.db.cursor()
             cursor.execute(create_table_sql)
             self.db.commit()
+            cursor.close()
         except:
             pass
+
+    def load_model(self):
+        ''' draws nodes and pipes on canvas '''
+
+        # draw nodes
+        cursor = self.db.cursor()
+        cursor.execute('SELECT * FROM nodes')
+        for node in cursor:
+            self.parent.main.draw_node(node[0], node[-2], node[-1])
+
+        # draw pipes
+        sql_get_pipes = '''
+                        SELECT 
+                            pipes.id, 
+                            pipes.pipe_name, 
+                            pipes.node1, 
+                            pipes.node2, 
+                            pipes.attr1, 
+                            pipes.attr2, 
+                            pipes.attr3, 
+                            pipes.attr4, 
+                            pipes.attr5, 
+                            pipes.nominal_diameter, 
+                            pipes.internal_diameter, 
+                            pipes.length, 
+                            pipes.flow, 
+                            pipes.flow_direction, 
+                            pipes.v, 
+                            pipes.Re, 
+                            pipes.f, 
+                            pipes.n_exp, 
+                            q1.x1, 
+                            q1.y1, 
+                            q2.x2, 
+                            q2.y2 
+                        FROM
+                            pipes
+                        INNER JOIN 
+                            (
+                            SELECT pipes.id, 
+                                nodes.x as x1, 
+                                nodes.y as y1 
+                            FROM pipes 
+                            INNER JOIN nodes on pipes.node1 = nodes.node_name
+                            ) q1 on pipes.id = q1.id
+                        INNER JOIN 
+                            (
+                            SELECT pipes.id, 
+                                nodes.x as x2, 
+                                nodes.y as y2
+                            FROM pipes 
+                            INNER JOIN nodes on pipes.node2 = nodes.node_name
+                            ) q2 on pipes.id = q2.id
+                        '''
+        cursor.execute(sql_get_pipes)
+        for pipe in cursor:
+            self.parent.main.draw_line(pipe[0], pipe[-4], pipe[-3], pipe[-2], pipe[-1])
+
+        cursor.close()
 
 class Main(tk.Frame):
     def __init__(self, parent):
@@ -107,6 +170,17 @@ class Main(tk.Frame):
         self.width = read_config(config_parser, 'RESOLUTION', 'width')
         self.height = read_config(config_parser, 'RESOLUTION', 'height')
         self.canvas = tk.Canvas(parent.frame, width=self.width, height=self.height)
+
+    def draw_node(self, id, x, y):
+        ''' Draw node onto the canvas '''
+        # TODO: apply legend (upcoming feat)
+        r = 5 # node radius
+        self.canvas.create_oval(x-r, y-r, x+r, y+r, tag=('node',id), fill='black')
+
+    def draw_line(self, id, x1, y1, x2, y2):
+        # TODO: apply legend (upcoming feat)
+        pipe_width = 3 # pipe width
+        self.canvas.create_line(x1, y1, x2, y2, tag=('pipe', id), fill='black', width=pipe_width)
 
 
 class MenuBar:
@@ -177,6 +251,20 @@ class MainApplication(tk.Frame):
             self.model.filepath = saveas_file
 
 
+    def open(self):
+        files = [('PyFlow H2O model', '*.pfh'),
+                 ('All Files', '*.*')]
+        print('hello')
+        open_file = askopenfilename(filetypes=files)
+
+
+        if open_file != '': # if user did not cancel the file open function
+            self.model.db.close()
+            self.model.filepath = open_file
+            self.model.open_db(self.model.filepath)
+            self.model.load_model()
+
+
     def initUI(self):
         ''' Initializes main window title and menu bar'''
 
@@ -185,7 +273,7 @@ class MainApplication(tk.Frame):
 
         file_commands = [
                         ('New Model', None),
-                        ('Open...', None),
+                        ('Open...', self.open),
                         ('Save', partial(self.save, 'SAVE')),
                         ('Save as...', partial(self.save, 'SAVE_AS')),
                         ('Quit', on_closing)
@@ -227,7 +315,7 @@ def on_closing():
     # TODO: add check if model has been saved or not
     if messagebox.askokcancel('Quit', 'Do you want to quit?'):
         try:
-            app.model.db.db.close()
+            app.model.db.close()
         except:
             pass
         root.destroy()
