@@ -121,7 +121,7 @@ class Model:
         cursor = self.db.cursor()
         cursor.execute('SELECT * FROM nodes')
         for node in cursor:
-            self.parent.main.draw_node(node[0], node[-2], node[-1])
+            self.parent.main.draw_node(f'n-{node[0]}', node[-2], node[-1])
 
         # draw pipes
         sql_get_pipes = '''
@@ -169,7 +169,7 @@ class Model:
                         '''
         cursor.execute(sql_get_pipes)
         for pipe in cursor:
-            self.parent.main.draw_line(pipe[0], pipe[-4], pipe[-3], pipe[-2], pipe[-1])
+            self.parent.main.draw_line(f'p-{pipe[0]}', pipe[-4], pipe[-3], pipe[-2], pipe[-1])
 
         cursor.close()
 
