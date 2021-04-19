@@ -29,20 +29,30 @@ def read_config(parser_instance, setting, attribute):
 class Model:
     def __init__(self, parent, filepath):
         self.parent = parent
-        self.mode = 'View'
+        self.mode = 'View/Select'
+
+        # build new database tables or load existing file
+        self.init_db(filepath)
+
+
+    def init_db(self, filepath):
+
+        # open a database in memory - working db
+        self.open_db(":memory:")
 
         if filepath == None:
             self.filepath = None
-            self.open_db(":memory:")
             self.new_db()
         elif os.path.exists(filepath):
             self.filepath = filepath
-            self.open_db(self.filepath)
-            self.load_model() # TODO: verify if this is working
+            source = sqlite3.connect(filepath)
+            source.backup(self.db) # copy contents from local file to memory
+            source.close()
+            self.load_model() # TODO: verify if this is working if sys argument
         else:
             self.filepath = None
-            self.open_db(":memory:")
             self.new_db()
+
 
     def open_db(self, connect_string):
         self.db = sqlite3.connect(connect_string)
@@ -260,9 +270,10 @@ class MainApplication(tk.Frame):
 
         if open_file != '': # if user did not cancel the file open function
             self.model.db.close()
-            self.model.filepath = open_file
-            self.model.open_db(self.model.filepath)
-            self.model.load_model()
+            self.model.init_db(open_file)
+            #self.model.filepath = open_file
+            #self.model.open_db(self.model.filepath)
+            #self.model.load_model()
 
 
     def initUI(self):
