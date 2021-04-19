@@ -285,9 +285,6 @@ class MainApplication(tk.Frame):
         if open_file != '': # if user did not cancel the file open function
             self.model.db.close()
             self.model.init_db(open_file)
-            #self.model.filepath = open_file
-            #self.model.open_db(self.model.filepath)
-            #self.model.load_model()
 
 
     def initUI(self):
