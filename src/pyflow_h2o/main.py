@@ -213,18 +213,32 @@ class MenuBar:
         self.menubar.add_cascade(label=menuname, menu=menu)
 
 class Button:
-    def __init__(self, parent):
+    def __init__(self, parent, text):
         self.parent = parent
+        self.text = text
         self.create()
 
     def create(self):
-        self.button = tk.Button(self.parent.frame, text='Hello')
+        self.button = tk.Button(self.parent.frame, text=self.text)
+
+class TopFrame:
+    def __init__(self, parent):
+        self.parent = parent
+        self.width = read_config(config_parser, 'RESOLUTION', 'width')
+        self.height = 16 # pixels
+        self.create()
+
+    def create(self):
+        self.frame = tk.Frame(self.parent.parent, width=self.width, height=self.height)
+
 
 class MainApplication(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         ''' main tkinter window '''
         self.parent = parent
         self.frame = tk.Frame.__init__(self, parent, *args, **kwargs)
+        self.top_frame = TopFrame(self)
+        self.top_frame.frame.pack()
 
         # Create model instance
         try:
@@ -280,6 +294,7 @@ class MainApplication(tk.Frame):
         ''' Initializes main window title and menu bar'''
 
         self.parent.title('PyFlow H2O')
+
         self.menubar = MenuBar(self.parent)
 
         file_commands = [
@@ -312,7 +327,7 @@ class MainApplication(tk.Frame):
         self.modemenu = self.menubar.add_menu('Mode', commands=mode_commands)
 
         # create quick button menu for testing
-        self.button = Button(self)
+        self.button = Button(self, 'hello')
         self.button.button.pack(side='left', anchor='nw')
 
         # create canvas
