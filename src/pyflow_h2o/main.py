@@ -180,18 +180,45 @@ class Main(tk.Frame):
         self.width = read_config(config_parser, 'RESOLUTION', 'width')
         self.height = read_config(config_parser, 'RESOLUTION', 'height')
         self.canvas = tk.Canvas(parent.frame, width=self.width, height=self.height)
+        self.canvas.bind('<Button-1>', self.action)
 
     def draw_node(self, id, x, y):
         ''' Draw node onto the canvas '''
         # TODO: apply legend (upcoming feat)
         r = 5 # node radius
-        self.canvas.create_oval(x-r, y-r, x+r, y+r, tag=('node',id), fill='black')
+        self.canvas.create_oval(x-r, y-r, x+r, y+r, tag=('all','node',id), fill='black')
 
     def draw_line(self, id, x1, y1, x2, y2):
         # TODO: apply legend (upcoming feat)
         pipe_width = 3 # pipe width
-        self.canvas.create_line(x1, y1, x2, y2, tag=('pipe', id), fill='black', width=pipe_width)
+        self.canvas.create_line(x1, y1, x2, y2, tag=('all','pipe', id), fill='black', width=pipe_width)
 
+    def action(self, event):
+
+        if self.parent.model.mode == 'node':
+            new_node = ['0' for _ in range(0,14)] # blank list for inserting into database
+            new_node[-2] = event.x
+            new_node[-1] = event.y
+
+            # get the next availabile unique node id
+            cursor = self.parent.model.db.cursor()
+            cursor.execute('SELECT max(id) FROM nodes')
+            max_id = cursor.fetchall()
+
+            if max_id[0][0] is None:
+                new_node[0] = 1 # blank model, start id from 0
+            else:
+                new_node[0] = max_id[0][0] + 1 # pick next availabile id number
+
+            # draw the new node
+            self.draw_node(new_node[0], event.x, event.y)
+
+            # insert new node into database
+            new_node_sql = ', '.join(str(i) for i in new_node)
+            cursor.execute(f'INSERT INTO nodes VALUES({new_node_sql})')
+            cursor.close()
+        else:
+            pass
 
 class MenuBar:
     def __init__(self, parent):
@@ -278,14 +305,16 @@ class MainApplication(tk.Frame):
     def open(self):
         files = [('PyFlow H2O model', '*.pfh'),
                  ('All Files', '*.*')]
-        print('hello')
         open_file = askopenfilename(filetypes=files)
 
 
         if open_file != '': # if user did not cancel the file open function
             self.model.db.close()
+            self.main.canvas.delete('all')
             self.model.init_db(open_file)
 
+    def enter_node_mode(self):
+        self.model.mode = 'node'
 
     def initUI(self):
         ''' Initializes main window title and menu bar'''
@@ -312,7 +341,7 @@ class MainApplication(tk.Frame):
 
         mode_commands = [
                         ('View/Select', None),
-                        ('Draw Nodes', None),
+                        ('Draw Nodes', self.enter_node_mode),
                         ('Draw Pipes', None),
                         ('Draw Valves', None),
                         ('Draw Pumps', None)
