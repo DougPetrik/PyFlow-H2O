@@ -6,11 +6,11 @@ from functools import partial
 import os
 import sys
 import sqlite3
+from ctypes import *
 
-# TODO
-#import windll
 
-#windll.shcore.SetProcessDpiAwareness(1)
+# windows display scaling compatibility
+windll.shcore.SetProcessDpiAwareness(1)
 
 import configparser
 import os
@@ -306,7 +306,6 @@ class MainApplication(tk.Frame):
         files = [('PyFlow H2O model', '*.pfh'),
                  ('All Files', '*.*')]
         open_file = askopenfilename(filetypes=files)
-
 
         if open_file != '': # if user did not cancel the file open function
             self.model.db.close()
