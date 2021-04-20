@@ -27,8 +27,6 @@ def read_config(parser_instance, setting, attribute):
 class Model:
     def __init__(self, parent, filepath):
         self.parent = parent
-        self.mode = 'View/Select'
-        self.draw_mode = 'None'
 
         # build new database tables or load existing file
         self.init_db(filepath)
@@ -207,7 +205,7 @@ class Main(tk.Frame):
     def action_leftclick(self, event):
         ''' handles canvas click events '''
 
-        if self.parent.model.mode == 'node':
+        if self.parent.mode == 'node':
             new_node = ['0' for _ in range(0,self.parent.model.node_col_count)] # blank list for inserting into database
             new_node[-2] = event.x
             new_node[-1] = event.y
@@ -251,15 +249,6 @@ class MenuBar:
 
         self.menubar.add_cascade(label=menuname, menu=menu)
 
-class Button:
-    def __init__(self, parent, text):
-        self.parent = parent
-        self.text = text
-        self.create()
-
-    def create(self):
-        self.button = tk.Button(self.parent.frame, text=self.text)
-
 class TopFrame:
     def __init__(self, parent):
         self.parent = parent
@@ -280,7 +269,6 @@ class SidePane:
     def create(self):
         self.frame = tk.Frame(self.parent.parent, width=self.width, height=self.height)
 
-
 class Ribbon:
     def __init__(self, parent):
         self.parent = parent
@@ -291,11 +279,27 @@ class Ribbon:
     def create(self):
         self.frame = tk.Frame(self.parent.parent, width=self.width, height=self.height)
 
+class Ribbon_Button:
+    def __init__(self, parent, image_path, command, hover_text):
+        self.parent = parent
+        self.width = 32
+        self.height = 32
+        self.text = hover_text
+        self.create(image_path, command)
+
+    def create(self, image_path, command):
+        # note - image_path must be r string
+        self.photoimage = tk.PhotoImage(file = image_path)
+        self.photoimage = self.photoimage.subsample(1,1)
+        self.button = tk.Button(self.parent, width=self.width, height=self.height, image=self.photoimage, command=command)
+
 class MainApplication(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         ''' main tkinter window '''
         self.parent = parent
         self.frame = tk.Frame.__init__(self, parent, *args, **kwargs)
+        self.mode = 'View/Select'
+        self.draw_mode = 'None'
         #self.top_frame = TopFrame(self)
         #self.top_frame.frame.pack()
 
@@ -333,7 +337,6 @@ class MainApplication(tk.Frame):
             conn.commit()
             self.model.filepath = saveas_file
 
-
     def open(self):
         files = [('PyFlow H2O model', '*.pfh'),
                  ('All Files', '*.*')]
@@ -344,8 +347,13 @@ class MainApplication(tk.Frame):
             self.main.canvas.delete('all')
             self.model.init_db(open_file)
 
+    def change_mode(self, mode, draw_mode):
+        ' Changes application mode between drawing, selecting, editing, etc.'
+        self.mode = mode
+        self.draw_mode = draw_mode
+
     def enter_node_mode(self):
-        self.model.mode = 'node'
+        self.mode = 'node'
 
     def initUI(self):
         ''' Initializes main window title and menu bar'''
@@ -388,8 +396,19 @@ class MainApplication(tk.Frame):
         #self.button.button.pack(side='left', anchor='nw')
 
         # create top ribbon
-        self.ribbon = Ribbon(self)
-        self.ribbon.frame.pack(side='top', expand='False')
+        #self.ribbon = Ribbon(self)
+        #self.ribbon.frame.pack(side='top', expand='False')
+
+        # add buttons to ribbon
+        self.add_node_button = Ribbon_Button(self, r'AddNode.png', command=partial(self.change_mode, 'node', 'add'), hover_text='Add Node')
+        self.add_node_button.button.pack(side='top', anchor='nw')
+        #self.photoimage = tk.PhotoImage(file = r'AddNode.gif')
+        #self.photoimage = self.photoimage.subsample(2,2)
+        #self.add_node_button = tk.Button(self.frame, width='32', height='32', image=self.photoimage)
+        #self.add_node_button.pack(side='top', anchor='nw')
+        #self.add_node_button = tk.Button(self.ribbon.)
+        #self.button = tk.Button(self.parent.frame, width=32, height=32, image=photoimage, command=command, text='hello')
+
 
         # create side pane
         self.side_pane = SidePane(self)
@@ -397,7 +416,7 @@ class MainApplication(tk.Frame):
 
         # create canvas
         self.main = Main(self)
-        self.main.canvas.pack(expand=True, fill='both')
+        self.main.canvas.pack(side='bottom', expand=True, fill='both')
 
 
 
