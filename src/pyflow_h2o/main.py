@@ -205,7 +205,7 @@ class Main(tk.Frame):
     def action_leftclick(self, event):
         ''' handles canvas click events '''
 
-        if self.parent.mode == 'node':
+        if self.parent.mode == 'node' and self.parent.draw_mode == 'add':
             new_node = ['0' for _ in range(0,self.parent.model.node_col_count)] # blank list for inserting into database
             new_node[-2] = event.x
             new_node[-1] = event.y
@@ -221,12 +221,36 @@ class Main(tk.Frame):
                 new_node[0] = max_id[0][0] + 1 # pick next availabile id number
 
             # draw the new node
-            self.draw_node(new_node[0], event.x, event.y)
+            self.draw_node(f'n-{new_node[0]}', event.x, event.y)
 
             # insert new node into database
             new_node_sql = ', '.join(str(i) for i in new_node)
             cursor.execute(f'INSERT INTO nodes VALUES({new_node_sql})')
+            self.parent.model.db.commit()
             cursor.close()
+
+        elif self.parent.mode == 'node' and self.parent.draw_mode == 'delete':
+            print(event.widget.find_overlapping(event.x, event.y, event.x, event.y))
+            try:
+                items = event.widget.find_overlapping(event.x, event.y, event.x, event.y)
+                for item in items:
+                    if 'n' in self.canvas.gettags(item)[2]: # check if mouse is over a node
+                        node_tag = self.canvas.gettags(item)[2]
+                        break
+                #item_id = event.widget.find_withtag('current')[0]
+                #node_tag = self.canvas.gettags(item_id)[2]
+                self.canvas.delete(node_tag)
+
+                # delete node from database
+                node_id = node_tag.split('-')[1]
+                delete_node_sql = f'DELETE FROM nodes WHERE ID = {node_id}'
+                self.parent.model.db.cursor().execute(delete_node_sql)
+                self.parent.model.db.commit()
+                self.parent.model.db.cursor().close()
+
+            except:
+                pass
+
         else:
             pass
 
@@ -277,7 +301,7 @@ class Ribbon:
         self.create()
 
     def create(self):
-        self.frame = tk.Frame(self.parent.parent, width=self.width, height=self.height)
+        self.frame = tk.Frame(self.parent, width=self.width, height=self.height, highlightbackground='grey', highlightthickness=1)
 
 class Ribbon_Button:
     def __init__(self, parent, image_path, command, hover_text):
@@ -290,7 +314,7 @@ class Ribbon_Button:
     def create(self, image_path, command):
         # note - image_path must be r string
         self.photoimage = tk.PhotoImage(file = image_path)
-        self.photoimage = self.photoimage.subsample(1,1)
+        #self.photoimage = self.photoimage.subsample(2,2)
         self.button = tk.Button(self.parent, width=self.width, height=self.height, image=self.photoimage, command=command)
 
 class MainApplication(tk.Frame):
@@ -396,12 +420,30 @@ class MainApplication(tk.Frame):
         #self.button.button.pack(side='left', anchor='nw')
 
         # create top ribbon
-        #self.ribbon = Ribbon(self)
-        #self.ribbon.frame.pack(side='top', expand='False')
+        self.ribbon = Ribbon(self)
+        self.ribbon.frame.pack(side='top', expand=False, fill='x')
 
+        # add ribbon buttons
+        self.ribbon.add_node_button = Ribbon_Button(self.ribbon.frame, r'AddNode.png', command=partial(self.change_mode, 'node', 'add'), hover_text=None)
+        self.ribbon.add_node_button.button.pack(side='left', anchor='e', expand=False)
+
+        self.ribbon.delete_node_button = Ribbon_Button(self.ribbon.frame, r'DeleteNode.png', command=partial(self.change_mode, 'node', 'delete'), hover_text=None)
+        self.ribbon.delete_node_button.button.pack(side='left', anchor='e', expand=False)
+
+        #self.ribbon.move_node_button = Ribbon_Button(self.ribbon.frame, r'AddNode.png', command=None, hover_text=None)
+        #self.ribbon.move_node_button.button.pack(side='left',anchor='e', expand=False)
+
+        # archive
         # add buttons to ribbon
-        self.add_node_button = Ribbon_Button(self, r'AddNode.png', command=partial(self.change_mode, 'node', 'add'), hover_text='Add Node')
-        self.add_node_button.button.pack(side='top', anchor='nw')
+        ##self.add_node_button = Ribbon_Button(self, r'AddNode.png', command=partial(self.change_mode, 'node', 'add'), hover_text='Add Node')
+        ##self.add_node_button.button.pack(side='top', anchor='nw')
+
+        ##self.delete_node_button = Ribbon_Button(self, r'DeleteNode.png', command=partial(self.change_mode, 'node', 'delete'), hover_text=None)
+        ##self.delete_node_button.button.pack(side='top', anchor='n')
+
+
+
+
         #self.photoimage = tk.PhotoImage(file = r'AddNode.gif')
         #self.photoimage = self.photoimage.subsample(2,2)
         #self.add_node_button = tk.Button(self.frame, width='32', height='32', image=self.photoimage)
