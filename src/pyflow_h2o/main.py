@@ -7,13 +7,11 @@ import os
 import sys
 import sqlite3
 from ctypes import *
-
+import configparser
+import os
 
 # windows display scaling compatibility
 windll.shcore.SetProcessDpiAwareness(1)
-
-import configparser
-import os
 
 # this script's file path
 app_dir = os.path.dirname(os.path.abspath(__file__))
@@ -30,6 +28,7 @@ class Model:
     def __init__(self, parent, filepath):
         self.parent = parent
         self.mode = 'View/Select'
+        self.draw_mode = 'None'
 
         # build new database tables or load existing file
         self.init_db(filepath)
@@ -101,8 +100,11 @@ class Model:
                                  );
                                  """
 
+        # create model tables
         self.create_table(sql_create_pipes_table)
         self.create_table(sql_create_nodes_table)
+
+        self.count_cols()
 
     def create_table(self, create_table_sql):
         ''' adds table to open database / model '''
@@ -114,8 +116,14 @@ class Model:
         except:
             pass
 
+    def count_cols(self):
+        # count the number of columns in each database table
+        self.node_col_count = self.db.cursor().execute("SELECT count(*) FROM pragma_table_info('nodes')").fetchall()[0][0]
+        self.pipe_col_count = self.db.cursor().execute("SELECT count(*) FROM pragma_table_info('pipes')").fetchall()[0][0]
+        self.db.cursor().close()
+
     def load_model(self):
-        ''' draws nodes and pipes on canvas '''
+        ''' fetches model data and draws them on canvas '''
 
         # draw nodes
         cursor = self.db.cursor()
@@ -173,14 +181,17 @@ class Model:
 
         cursor.close()
 
+        # get count of columns
+        self.count_cols()
+
 class Main(tk.Frame):
     def __init__(self, parent):
         ''' reads config file and creates main canvas '''
         self.parent = parent
         self.width = read_config(config_parser, 'RESOLUTION', 'width')
         self.height = read_config(config_parser, 'RESOLUTION', 'height')
-        self.canvas = tk.Canvas(parent.frame, width=self.width, height=self.height)
-        self.canvas.bind('<Button-1>', self.action)
+        self.canvas = tk.Canvas(parent.frame, width=self.width, height=self.height, bg='light blue')
+        self.canvas.bind('<Button-1>', self.action_leftclick)
 
     def draw_node(self, id, x, y):
         ''' Draw node onto the canvas '''
@@ -193,10 +204,11 @@ class Main(tk.Frame):
         pipe_width = 3 # pipe width
         self.canvas.create_line(x1, y1, x2, y2, tag=('all','pipe', id), fill='black', width=pipe_width)
 
-    def action(self, event):
+    def action_leftclick(self, event):
+        ''' handles canvas click events '''
 
         if self.parent.model.mode == 'node':
-            new_node = ['0' for _ in range(0,14)] # blank list for inserting into database
+            new_node = ['0' for _ in range(0,self.parent.model.node_col_count)] # blank list for inserting into database
             new_node[-2] = event.x
             new_node[-1] = event.y
 
@@ -258,14 +270,34 @@ class TopFrame:
     def create(self):
         self.frame = tk.Frame(self.parent.parent, width=self.width, height=self.height)
 
+class SidePane:
+    def __init__(self, parent):
+        self.parent = parent
+        self.width = 250
+        self.height = read_config(config_parser, 'RESOLUTION', 'height')
+        self.create()
+
+    def create(self):
+        self.frame = tk.Frame(self.parent.parent, width=self.width, height=self.height)
+
+
+class Ribbon:
+    def __init__(self, parent):
+        self.parent = parent
+        self.width = read_config(config_parser, 'RESOLUTION', 'width')
+        self.height = 32
+        self.create()
+
+    def create(self):
+        self.frame = tk.Frame(self.parent.parent, width=self.width, height=self.height)
 
 class MainApplication(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         ''' main tkinter window '''
         self.parent = parent
         self.frame = tk.Frame.__init__(self, parent, *args, **kwargs)
-        self.top_frame = TopFrame(self)
-        self.top_frame.frame.pack()
+        #self.top_frame = TopFrame(self)
+        #self.top_frame.frame.pack()
 
         # Create model instance
         try:
@@ -352,12 +384,22 @@ class MainApplication(tk.Frame):
         self.modemenu = self.menubar.add_menu('Mode', commands=mode_commands)
 
         # create quick button menu for testing
-        self.button = Button(self, 'hello')
-        self.button.button.pack(side='left', anchor='nw')
+        #self.button = Button(self, 'hello')
+        #self.button.button.pack(side='left', anchor='nw')
+
+        # create top ribbon
+        self.ribbon = Ribbon(self)
+        self.ribbon.frame.pack(side='top', expand='False')
+
+        # create side pane
+        self.side_pane = SidePane(self)
+        self.side_pane.frame.pack(side='right', expand=False)
 
         # create canvas
         self.main = Main(self)
-        self.main.canvas.pack()
+        self.main.canvas.pack(expand=True, fill='both')
+
+
 
 
 
@@ -374,7 +416,7 @@ def on_closing():
 
 if __name__ == '__main__':
     root = tk.Tk()
-    app = MainApplication(root).pack(side='top', fill='both', expand=True)
+    app = MainApplication(root).pack(side='top', fill='both', expand=False)
     root.protocol('WM_DELETE_WINDOW', on_closing)
     root.mainloop()
 
