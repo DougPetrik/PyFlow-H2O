@@ -316,7 +316,7 @@ class Ribbon:
         self.create()
 
     def create(self):
-        self.frame = tk.Frame(self.parent, width=self.width, height=self.height, highlightbackground='grey', highlightthickness=1)
+        self.frame = tk.Frame(self.parent, width=self.width, height=self.height, highlightbackground=None, highlightthickness=1)
 
 class Ribbon_Button:
     def __init__(self, parent, image_path, command, hover_text):
@@ -330,7 +330,9 @@ class Ribbon_Button:
         # note - image_path must be r string
         self.photoimage = tk.PhotoImage(file = image_path)
         #self.photoimage = self.photoimage.subsample(2,2)
-        self.button = tk.Button(self.parent, width=self.width, height=self.height, image=self.photoimage, command=command)
+        self.button = tk.Button(self.parent, width=self.width, height=self.height, image=self.photoimage, command=command,
+                                highlightbackground='red', highlightthickness=1, borderwidth=4)
+        self.button.pack(side='left', anchor='e', expand=False)
 
 class MainApplication(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
@@ -391,9 +393,6 @@ class MainApplication(tk.Frame):
         self.mode = mode
         self.draw_mode = draw_mode
 
-    def enter_node_mode(self):
-        self.mode = 'node'
-
     def initUI(self):
         ''' Initializes main window title and menu bar'''
 
@@ -417,18 +416,24 @@ class MainApplication(tk.Frame):
         view_commands = [
                         ]
 
-        mode_commands = [
-                        ('View/Select', None),
-                        ('Draw Nodes', self.enter_node_mode),
-                        ('Draw Pipes', None),
-                        ('Draw Valves', None),
-                        ('Draw Pumps', None)
+        query_commands = [
+                         ('Select...', None),
+                         ('Spatial Select...', None)
+                         ]
+
+        report_commands = [
+                          ]
+
+        help_commands = [
+                        ('About', None)
                         ]
 
         self.filemenu = self.menubar.add_menu('File', commands=file_commands)
         self.editmenu = self.menubar.add_menu('Edit', commands=edit_commands)
         self.viewmenu = self.menubar.add_menu('View', commands=view_commands)
-        self.modemenu = self.menubar.add_menu('Mode', commands=mode_commands)
+        self.querymenu = self.menubar.add_menu('Query', commands=query_commands)
+        self.reportmenu = self.menubar.add_menu('Reports', commands=report_commands)
+        self.helpmenu = self.menubar.add_menu('Help', commands=help_commands)
 
         # create quick button menu for testing
         #self.button = Button(self, 'hello')
@@ -439,11 +444,24 @@ class MainApplication(tk.Frame):
         self.ribbon.frame.pack(side='top', expand=False, fill='x')
 
         # add ribbon buttons
-        self.ribbon.add_node_button = Ribbon_Button(self.ribbon.frame, r'AddNode.png', command=partial(self.change_mode, 'node', 'add'), hover_text=None)
-        self.ribbon.add_node_button.button.pack(side='left', anchor='e', expand=False)
+        self.ribbon.select_button = Ribbon_Button(self.ribbon.frame, r'Blank.png',
+                                                    command=partial(self.change_mode, 'select', None), hover_text=None)
+        # TODO: add query functionality
+        self.ribbon.query_button = Ribbon_Button(self.ribbon.frame, r'Blank.png',
+                                                    command=None, hover_text=None)
 
+        self.ribbon.add_node_button = Ribbon_Button(self.ribbon.frame, r'AddNode.png', command=partial(self.change_mode, 'node', 'add'), hover_text=None)
         self.ribbon.delete_node_button = Ribbon_Button(self.ribbon.frame, r'DeleteNode.png', command=partial(self.change_mode, 'node', 'delete'), hover_text=None)
-        self.ribbon.delete_node_button.button.pack(side='left', anchor='e', expand=False)
+        self.ribbon.move_node_button = Ribbon_Button(self.ribbon.frame, r'Blank.png', command=partial(self.change_mode, 'node', 'move'), hover_text=None)
+        self.ribbon.add_pipe_button = Ribbon_Button(self.ribbon.frame, r'Blank.png', command=partial(self.change_mode, 'pipe', 'add'), hover_text=None)
+
+        self.ribbon.delete_pipe_button = Ribbon_Button(self.ribbon.frame, r'Blank.png',
+                                                    command=partial(self.change_mode, 'pipe', 'add'), hover_text=None)
+
+        self.ribbon.reconnect_pipe_button = Ribbon_Button(self.ribbon.frame, r'Blank.png',
+                                                    command=partial(self.change_mode, 'pipe', 'reconnect'), hover_text=None)
+
+
 
         #self.ribbon.move_node_button = Ribbon_Button(self.ribbon.frame, r'AddNode.png', command=None, hover_text=None)
         #self.ribbon.move_node_button.button.pack(side='left',anchor='e', expand=False)
