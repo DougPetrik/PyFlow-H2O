@@ -230,23 +230,38 @@ class Main(tk.Frame):
             cursor.close()
 
         elif self.parent.mode == 'node' and self.parent.draw_mode == 'delete':
-            print(event.widget.find_overlapping(event.x, event.y, event.x, event.y))
             try:
+                # get list of canvas objects below cursor
                 items = event.widget.find_overlapping(event.x, event.y, event.x, event.y)
+
+                # determine if a node is present
                 for item in items:
                     if 'n' in self.canvas.gettags(item)[2]: # check if mouse is over a node
                         node_tag = self.canvas.gettags(item)[2]
+                        node_id = node_tag.split('-')[1]
                         break
-                #item_id = event.widget.find_withtag('current')[0]
-                #node_tag = self.canvas.gettags(item_id)[2]
-                self.canvas.delete(node_tag)
 
-                # delete node from database
-                node_id = node_tag.split('-')[1]
-                delete_node_sql = f'DELETE FROM nodes WHERE ID = {node_id}'
-                self.parent.model.db.cursor().execute(delete_node_sql)
-                self.parent.model.db.commit()
-                self.parent.model.db.cursor().close()
+                # check if node is connected to any pipes
+                sql = f'''
+                       SELECT count(nodes.id)
+                       FROM nodes
+                       INNER JOIN pipes on
+                         (nodes.node_name = pipes.node1
+                         or
+                         nodes.node_name = pipes.node2)
+                       WHERE nodes.id = {node_id}
+                       '''
+                leg_count = self.parent.model.db.cursor().execute(sql).fetchall()[0][0]
+                print(leg_count)
+                if leg_count == 0:
+                    # delete node from canvas
+                    self.canvas.delete(node_tag)
+
+                    # delete node from database
+                    delete_node_sql = f'DELETE FROM nodes WHERE ID = {node_id}'
+                    self.parent.model.db.cursor().execute(delete_node_sql)
+                    self.parent.model.db.commit()
+                    self.parent.model.db.cursor().close()
 
             except:
                 pass
