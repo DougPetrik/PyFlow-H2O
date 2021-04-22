@@ -482,39 +482,11 @@ class MainApplication(tk.Frame):
                                                     command=partial(self.change_mode, 'pipe', 'reconnect'), hover_text=None)
 
 
-
-        #self.ribbon.move_node_button = Ribbon_Button(self.ribbon.frame, r'AddNode.png', command=None, hover_text=None)
-        #self.ribbon.move_node_button.button.pack(side='left',anchor='e', expand=False)
-
-        # archive
-        # add buttons to ribbon
-        ##self.add_node_button = Ribbon_Button(self, r'AddNode.png', command=partial(self.change_mode, 'node', 'add'), hover_text='Add Node')
-        ##self.add_node_button.button.pack(side='top', anchor='nw')
-
-        ##self.delete_node_button = Ribbon_Button(self, r'DeleteNode.png', command=partial(self.change_mode, 'node', 'delete'), hover_text=None)
-        ##self.delete_node_button.button.pack(side='top', anchor='n')
-
-
-
-
-        #self.photoimage = tk.PhotoImage(file = r'AddNode.gif')
-        #self.photoimage = self.photoimage.subsample(2,2)
-        #self.add_node_button = tk.Button(self.frame, width='32', height='32', image=self.photoimage)
-        #self.add_node_button.pack(side='top', anchor='nw')
-        #self.add_node_button = tk.Button(self.ribbon.)
-        #self.button = tk.Button(self.parent.frame, width=32, height=32, image=photoimage, command=command, text='hello')
-
         # create main frame
         self.main = Main(self)
-        #self.main.main_frame.pack(side='bottom', anchor='s', expand=True, fill='x')
-
-        #self.main.main_frame.pack(side='')
-
         self.main.main_frame.pack(side='bottom', expand=True, fill='both')
         self.main.canvas.pack(side='left', expand=True, fill='both')
         self.main.side_pane.pack(side='right', expand=False, fill='both')
-
-
 
 def on_closing():
     ''' Prompts user if they want to quit '''
