@@ -182,14 +182,34 @@ class Model:
         # get count of columns
         self.count_cols()
 
+class Canvas:
+    def __init__(self, parent):
+        self.parent = parent
+        self.width = int(read_config(config_parser, 'RESOLUTION', 'width')) - 250
+        self.height = read_config(config_parser, 'RESOLUTION', 'height')
+        self.create()
+
+    def create(self):
+        self.canvas = tk.Canvas(self.parent, width=self.width, height=self.height, bg='light blue')
+
+
+
+
 class Main(tk.Frame):
     def __init__(self, parent):
         ''' reads config file and creates main canvas '''
         self.parent = parent
         self.width = read_config(config_parser, 'RESOLUTION', 'width')
+        self.pane_width = 250
+        self.canvas_width = int(self.width) - self.pane_width
         self.height = read_config(config_parser, 'RESOLUTION', 'height')
-        self.canvas = tk.Canvas(parent.frame, width=self.width, height=self.height, bg='light blue')
+        self.create()
+
+    def create(self):
+        self.main_frame = tk.Frame(self.parent, width=self.width, height=self.height, highlightbackground='black', highlightthickness=1)
+        self.canvas = tk.Canvas(self.main_frame, width=self.canvas_width, height=self.height, bg='light blue')
         self.canvas.bind('<Button-1>', self.action_leftclick)
+        self.side_pane = tk.Frame(self.main_frame, width=self.pane_width, height=self.height, highlightbackground='black', highlightthickness=1)
 
     def draw_node(self, id, x, y):
         ''' Draw node onto the canvas '''
@@ -269,6 +289,7 @@ class Main(tk.Frame):
         else:
             pass
 
+
 class MenuBar:
     def __init__(self, parent):
         ''' class to handle initialization of menubars '''
@@ -306,7 +327,7 @@ class SidePane:
         self.create()
 
     def create(self):
-        self.frame = tk.Frame(self.parent.parent, width=self.width, height=self.height)
+        self.frame = tk.Frame(self.parent, width=self.width, height=self.height)
 
 class Ribbon:
     def __init__(self, parent):
@@ -331,7 +352,7 @@ class Ribbon_Button:
         self.photoimage = tk.PhotoImage(file = image_path)
         #self.photoimage = self.photoimage.subsample(2,2)
         self.button = tk.Button(self.parent, width=self.width, height=self.height, image=self.photoimage, command=command,
-                                highlightbackground='red', highlightthickness=1, borderwidth=4)
+                                highlightthickness=0, bd=0)
         self.button.pack(side='left', anchor='e', expand=False)
 
 class MainApplication(tk.Frame):
@@ -340,7 +361,6 @@ class MainApplication(tk.Frame):
         self.parent = parent
         self.frame = tk.Frame.__init__(self, parent, *args, **kwargs)
         self.mode = 'View/Select'
-        self.draw_mode = 'None'
         #self.top_frame = TopFrame(self)
         #self.top_frame.frame.pack()
 
@@ -484,16 +504,15 @@ class MainApplication(tk.Frame):
         #self.add_node_button = tk.Button(self.ribbon.)
         #self.button = tk.Button(self.parent.frame, width=32, height=32, image=photoimage, command=command, text='hello')
 
-
-        # create side pane
-        self.side_pane = SidePane(self)
-        self.side_pane.frame.pack(side='right', expand=False)
-
-        # create canvas
+        # create main frame
         self.main = Main(self)
-        self.main.canvas.pack(side='bottom', expand=True, fill='both')
+        #self.main.main_frame.pack(side='bottom', anchor='s', expand=True, fill='x')
 
+        #self.main.main_frame.pack(side='')
 
+        self.main.main_frame.pack(side='bottom', expand=True, fill='both')
+        self.main.canvas.pack(side='left', expand=True, fill='both')
+        self.main.side_pane.pack(side='right', expand=False, fill='both')
 
 
 
@@ -510,7 +529,7 @@ def on_closing():
 
 if __name__ == '__main__':
     root = tk.Tk()
-    app = MainApplication(root).pack(side='top', fill='both', expand=False)
+    app = MainApplication(root).pack(side='top', fill='both', expand=True)
     root.protocol('WM_DELETE_WINDOW', on_closing)
     root.mainloop()
 
