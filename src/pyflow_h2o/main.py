@@ -2,8 +2,9 @@ import tkinter as tk
 from tkinter import messagebox
 from tkinter.filedialog import asksaveasfilename
 from tkinter.filedialog import askopenfilename
+import tkinter.ttk as ttk
+
 from functools import partial
-import os
 import sys
 import sqlite3
 from ctypes import *
@@ -182,19 +183,6 @@ class Model:
         # get count of columns
         self.count_cols()
 
-class Canvas:
-    def __init__(self, parent):
-        self.parent = parent
-        self.width = int(read_config(config_parser, 'RESOLUTION', 'width')) - 250
-        self.height = read_config(config_parser, 'RESOLUTION', 'height')
-        self.create()
-
-    def create(self):
-        self.canvas = tk.Canvas(self.parent, width=self.width, height=self.height, bg='light blue')
-
-
-
-
 class Main(tk.Frame):
     def __init__(self, parent):
         ''' reads config file and creates main canvas '''
@@ -205,11 +193,31 @@ class Main(tk.Frame):
         self.height = read_config(config_parser, 'RESOLUTION', 'height')
         self.create()
 
+
     def create(self):
-        self.main_frame = tk.Frame(self.parent, width=self.width, height=self.height, highlightbackground='black', highlightthickness=1)
+
+        # create the main frame
+        self.main_frame = tk.Frame(self.parent, width=self.width, height=self.height)
+
+        # create the canvas
         self.canvas = tk.Canvas(self.main_frame, width=self.canvas_width, height=self.height, bg='light blue')
         self.canvas.bind('<Button-1>', self.action_leftclick)
-        self.side_pane = tk.Frame(self.main_frame, width=self.pane_width, height=self.height, highlightbackground='black', highlightthickness=1)
+
+        # add canvas scroll bars
+        self.xsb = tk.Scrollbar(self.canvas, orient='horizontal', command=self.canvas.xview)
+        self.canvas.configure(xscrollcommand=self.xsb.set)
+        self.canvas.configure(scrollregion=(0,0,1000,1000))
+        self.canvas.bind('<ButtonPress-2>', self.scroll_start)
+        self.canvas.bind('<B2-Motion>', self.scroll_move)
+
+        # add the side pane
+        self.side_pane = tk.Frame(self.main_frame, width=self.pane_width, height=self.height, bg='white', highlightbackground='black', highlightthickness=1)
+
+    def scroll_start(self, event):
+        self.canvas.scan_mark(event.x, event.y)
+
+    def scroll_move(self, event):
+        self.canvas.scan_dragto(event.x, event.y, gain=1)
 
     def draw_node(self, id, x, y):
         ''' Draw node onto the canvas '''
@@ -224,7 +232,6 @@ class Main(tk.Frame):
 
     def action_leftclick(self, event):
         ''' handles canvas click events '''
-
         if self.parent.mode == 'node' and self.parent.draw_mode == 'add':
             new_node = ['0' for _ in range(0,self.parent.model.node_col_count)] # blank list for inserting into database
             new_node[-2] = event.x
@@ -272,7 +279,7 @@ class Main(tk.Frame):
                        WHERE nodes.id = {node_id}
                        '''
                 leg_count = self.parent.model.db.cursor().execute(sql).fetchall()[0][0]
-                print(leg_count)
+
                 if leg_count == 0:
                     # delete node from canvas
                     self.canvas.delete(node_tag)
@@ -283,12 +290,33 @@ class Main(tk.Frame):
                     self.parent.model.db.commit()
                     self.parent.model.db.cursor().close()
 
+
             except:
+                pass
+
+        elif self.parent.mode == 'pipe' and self.parent.draw_mode == 'add':
+            if self.parent.drawing is False:
+                try:
+                    items = event.widget.find_overlapping(event.x, event.y, event.x, event.y)
+
+                    # determine if a node is present
+                    for item in items:
+                        if 'n' in self.canvas.gettags(item)[2]:  # check if mouse is over a node
+                            node_tag = self.canvas.gettags(item)[2]
+                            node_id = node_tag.split('-')[1]
+                            break
+                except:
+                    pass
+
+            elif self.parent.drawing == True:
                 pass
 
         else:
             pass
 
+    def draw_new_pipe(self, event):
+        x, y = event.x, event.y
+        if canvas.old_coord
 
 class MenuBar:
     def __init__(self, parent):
@@ -317,52 +345,54 @@ class TopFrame:
         self.create()
 
     def create(self):
-        self.frame = tk.Frame(self.parent.parent, width=self.width, height=self.height)
-
-class SidePane:
-    def __init__(self, parent):
-        self.parent = parent
-        self.width = 250
-        self.height = read_config(config_parser, 'RESOLUTION', 'height')
-        self.create()
-
-    def create(self):
-        self.frame = tk.Frame(self.parent, width=self.width, height=self.height)
+        self.frame = tk.Frame(self.parent.parent, width=self.width, height=self.height, bg='white')
 
 class Ribbon:
-    def __init__(self, parent):
+    def __init__(self, parent, height):
         self.parent = parent
         self.width = read_config(config_parser, 'RESOLUTION', 'width')
-        self.height = 32
+        self.height = height
         self.create()
 
     def create(self):
-        self.frame = tk.Frame(self.parent, width=self.width, height=self.height, highlightbackground=None, highlightthickness=1)
+        self.frame = tk.Frame(self.parent, width=self.width, height=self.height, bg='white', highlightthickness=0, bd=0)
 
 class Ribbon_Button:
-    def __init__(self, parent, image_path, command, hover_text):
+    def __init__(self, parent, image_path, image_path_selected, command):
         self.parent = parent
         self.width = 32
+        self.frame_width = self.width
         self.height = 32
-        self.text = hover_text
-        self.create(image_path, command)
+        self.frame_height = self.height
+        self.create(image_path, image_path_selected, command)
 
-    def create(self, image_path, command):
+    def create(self, image_path, image_path_selected, command):
         # note - image_path must be r string
         self.photoimage = tk.PhotoImage(file = image_path)
-        #self.photoimage = self.photoimage.subsample(2,2)
-        self.button = tk.Button(self.parent, width=self.width, height=self.height, image=self.photoimage, command=command,
-                                highlightthickness=0, bd=0)
-        self.button.pack(side='left', anchor='e', expand=False)
+        self.photoimage_select = tk.PhotoImage(file = image_path_selected)
+        self.frame = tk.Frame(self.parent, width=self.frame_width, height=self.frame_height, highlightthickness=0, bg='white')
+        self.frame.pack(side='left', anchor='e', expand=False)
+        self.frame.button = tk.Button(self.frame, width=self.width, height=self.height, image=self.photoimage, command=command,
+                                highlightthickness=1, bd=0, relief='sunken', bg='white')
+        self.frame.button.pack(expand=True, fill=None)
+
+        self.frame.button.bind('<Enter>', self.on_enter)
+        self.frame.button.bind('<Leave>', self.on_leave)
+
+    def on_enter(self, event):
+        self.frame.button.configure(relief='raised')
+        #self.button.configure(highlightbackground='black', highlightthickness=2, bd=0)
+
+    def on_leave(self, event):
+        self.frame.button.configure(relief='sunken')
+        #self.button.configure(highlightbackground=None, highlightthickness=1, bd=0)
 
 class MainApplication(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
         ''' main tkinter window '''
         self.parent = parent
         self.frame = tk.Frame.__init__(self, parent, *args, **kwargs)
-        self.mode = 'View/Select'
-        #self.top_frame = TopFrame(self)
-        #self.top_frame.frame.pack()
+        self.configure(bg='white')
 
         # Create model instance
         try:
@@ -385,6 +415,8 @@ class MainApplication(tk.Frame):
                 saveas_file = self.model.filepath
         elif save_type == 'SAVE_AS':
             saveas_file = asksaveasfilename(filetypes=files, defaultextension=files)
+        else:
+            saveas_file = ''
 
 
         if saveas_file != '': # if user did not cancel the save as function
@@ -412,6 +444,39 @@ class MainApplication(tk.Frame):
         ' Changes application mode between drawing, selecting, editing, etc.'
         self.mode = mode
         self.draw_mode = draw_mode
+
+        # TODO: find a better way to loop through all ribbon buttons and change image
+        self.clear_button_images()
+
+        #for frame in self.ribbon.frame.children.values():
+        #    button = frame.children['!button']
+        #    button.configure(image=photoimage)
+
+        if self.mode == 'select':
+            self.ribbon.select_button.frame.button.configure(image=self.ribbon.select_button.photoimage_select)
+
+        elif self.mode == 'node':
+            if self.draw_mode == 'add':
+                self.ribbon.add_node_button.frame.button.configure(image=self.ribbon.add_node_button.photoimage_select)
+            elif self.draw_mode == 'delete':
+                self.ribbon.delete_node_button.frame.button.configure(image=self.ribbon.delete_node_button.photoimage_select)
+            #for button in frame:
+            #    print(button)
+            #print(child.children.values()[0])
+
+        #for child in self.ribbon.frame.children.children.values():
+        #    print(child)
+            #child.configure(image=child.photoimage)
+
+        #if self.mode == 'node' and self.draw_mode == 'add':
+        #    print('hello')
+
+            #self.ribbon.add_node_button.button.configure(image=self.ribbon.add_node_button.photoimage_select)
+
+    def clear_button_images(self):
+        self.ribbon.select_button.frame.button.configure(image=self.ribbon.select_button.photoimage)
+        self.ribbon.add_node_button.frame.button.configure(image=self.ribbon.add_node_button.photoimage)
+        self.ribbon.delete_node_button.frame.button.configure(image=self.ribbon.delete_node_button.photoimage)
 
     def initUI(self):
         ''' Initializes main window title and menu bar'''
@@ -460,33 +525,59 @@ class MainApplication(tk.Frame):
         #self.button.button.pack(side='left', anchor='nw')
 
         # create top ribbon
-        self.ribbon = Ribbon(self)
+        self.ribbon = Ribbon(self, 32)
         self.ribbon.frame.pack(side='top', expand=False, fill='x')
 
         # add ribbon buttons
-        self.ribbon.select_button = Ribbon_Button(self.ribbon.frame, r'Blank.png',
-                                                    command=partial(self.change_mode, 'select', None), hover_text=None)
+        self.ribbon.select_button = Ribbon_Button(self.ribbon.frame, r'View.png', r'View_Select.png',
+                                                    command=partial(self.change_mode, 'select', None))
         # TODO: add query functionality
-        self.ribbon.query_button = Ribbon_Button(self.ribbon.frame, r'Blank.png',
-                                                    command=None, hover_text=None)
+        self.ribbon.query_button = Ribbon_Button(self.ribbon.frame, r'Query.png', r'Query_Select.png',
+                                                    command=None)
 
-        self.ribbon.add_node_button = Ribbon_Button(self.ribbon.frame, r'AddNode.png', command=partial(self.change_mode, 'node', 'add'), hover_text=None)
-        self.ribbon.delete_node_button = Ribbon_Button(self.ribbon.frame, r'DeleteNode.png', command=partial(self.change_mode, 'node', 'delete'), hover_text=None)
-        self.ribbon.move_node_button = Ribbon_Button(self.ribbon.frame, r'Blank.png', command=partial(self.change_mode, 'node', 'move'), hover_text=None)
-        self.ribbon.add_pipe_button = Ribbon_Button(self.ribbon.frame, r'Blank.png', command=partial(self.change_mode, 'pipe', 'add'), hover_text=None)
+        # add separator
+        self.add_separator(self.ribbon.frame, height=self.ribbon.height)
 
-        self.ribbon.delete_pipe_button = Ribbon_Button(self.ribbon.frame, r'Blank.png',
-                                                    command=partial(self.change_mode, 'pipe', 'add'), hover_text=None)
+        self.ribbon.add_node_button = Ribbon_Button(self.ribbon.frame, r'AddNode.png', r'AddNode_Select.png',
+                                                    command=partial(self.change_mode, 'node', 'add'))
+        self.ribbon.delete_node_button = Ribbon_Button(self.ribbon.frame, r'DeleteNode.png', r'DeleteNode_Select.png', command=partial(self.change_mode, 'node', 'delete'))
+        self.ribbon.move_node_button = Ribbon_Button(self.ribbon.frame, r'Blank.png', r'Blank.png', command=partial(self.change_mode, 'node', 'move'))
 
-        self.ribbon.reconnect_pipe_button = Ribbon_Button(self.ribbon.frame, r'Blank.png',
-                                                    command=partial(self.change_mode, 'pipe', 'reconnect'), hover_text=None)
+        # add separator
+        self.add_separator(self.ribbon.frame, height=self.ribbon.height)
 
+        self.ribbon.add_pipe_button = Ribbon_Button(self.ribbon.frame, r'Blank.png', r'Blank.png', command=partial(self.change_mode, 'pipe', 'add'))
+
+        self.ribbon.delete_pipe_button = Ribbon_Button(self.ribbon.frame, r'Blank.png', r'Blank.png',
+                                                    command=partial(self.change_mode, 'pipe', 'add'))
+
+        self.ribbon.reconnect_pipe_button = Ribbon_Button(self.ribbon.frame, r'Blank.png', r'Blank.png',
+                                                    command=partial(self.change_mode, 'pipe', 'reconnect'))
+
+        # create text ribbon
+        self.text_ribbon = Ribbon(self, 16)
+        self.text_ribbon.frame.pack(side='top', expand=False, fill='x')
 
         # create main frame
         self.main = Main(self)
         self.main.main_frame.pack(side='bottom', expand=True, fill='both')
         self.main.canvas.pack(side='left', expand=True, fill='both')
+        #self.main.xsb.pack(expand=False, fill='both')
         self.main.side_pane.pack(side='right', expand=False, fill='both')
+
+        # set default mode to select
+        self.change_mode('select', None)
+        self.drawing = False
+
+    def add_separator(self, frame, height):
+        # method to add a vertical separator of specified height to a frame
+        sep1 = tk.Frame(frame, width=8, height=height, bg='white')
+        sep1.pack(side='left', expand=False, fill='x')
+        sep2 = tk.Frame(frame, width=1, height=height, highlightbackground='black', highlightthickness=1, bg='white')
+        sep2.pack(side='left', expand=False, fill='x')
+        sep3 = tk.Frame(frame, width=8, height=height, bg='white')
+        sep3.pack(side='left', expand=False, fill='x')
+
 
 def on_closing():
     ''' Prompts user if they want to quit '''
