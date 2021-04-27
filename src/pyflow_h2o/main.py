@@ -11,6 +11,9 @@ from ctypes import *
 import configparser
 import os
 
+import string
+import random
+
 # windows display scaling compatibility
 windll.shcore.SetProcessDpiAwareness(1)
 
@@ -61,8 +64,8 @@ class Model:
                                  CREATE TABLE IF NOT EXISTS pipes (
                                  id integer PRIMARY KEY,
                                  pipe_name text,
-                                 node1 text,
-                                 node2 text,
+                                 node1 integer,
+                                 node2 integer,
                                  attr1 text,
                                  attr2 text,
                                  attr3 text,
@@ -163,7 +166,7 @@ class Model:
                                 nodes.x as x1, 
                                 nodes.y as y1 
                             FROM pipes 
-                            INNER JOIN nodes on pipes.node1 = nodes.node_name
+                            INNER JOIN nodes on pipes.node1 = nodes.id
                             ) q1 on pipes.id = q1.id
                         INNER JOIN 
                             (
@@ -171,7 +174,7 @@ class Model:
                                 nodes.x as x2, 
                                 nodes.y as y2
                             FROM pipes 
-                            INNER JOIN nodes on pipes.node2 = nodes.node_name
+                            INNER JOIN nodes on pipes.node2 = nodes.id
                             ) q2 on pipes.id = q2.id
                         '''
         cursor.execute(sql_get_pipes)
@@ -245,7 +248,7 @@ class Main(tk.Frame):
             if max_id[0][0] is None:
                 new_node[0] = 1 # blank model, start id from 0
             else:
-                new_node[0] = max_id[0][0] + 1 # pick next availabile id number
+                new_node[0] = max_id[0][0] + 1 # pick next availablee id number
 
             # draw the new node
             self.draw_node(f'n-{new_node[0]}', event.x, event.y)
@@ -281,6 +284,7 @@ class Main(tk.Frame):
                 leg_count = self.parent.model.db.cursor().execute(sql).fetchall()[0][0]
 
                 if leg_count == 0:
+
                     # delete node from canvas
                     self.canvas.delete(node_tag)
 
@@ -289,7 +293,6 @@ class Main(tk.Frame):
                     self.parent.model.db.cursor().execute(delete_node_sql)
                     self.parent.model.db.commit()
                     self.parent.model.db.cursor().close()
-
 
             except:
                 pass
@@ -305,18 +308,106 @@ class Main(tk.Frame):
                             node_tag = self.canvas.gettags(item)[2]
                             node_id = node_tag.split('-')[1]
                             break
+                        else:
+                            node_id = None
+
+                    if node_id != None:
+
+                        self.node1 = node_id
+                        self.node1_tag = node_tag
+                        coords = self.canvas.coords(self.node1_tag)
+                        self.x1, self.y1 = (coords[0]+coords[2])/2, (coords[1]+coords[3])/2
+                        self.parent.drawing = True
+                        self.canvas.bind('<Motion>', self.draw_new_pipe)
+
                 except:
                     pass
 
             elif self.parent.drawing == True:
-                pass
+                try:
 
+                    items = event.widget.find_overlapping(event.x, event.y, event.x, event.y)
+
+                    # determine if a node is present
+                    for item in items:
+                        if 'n' in self.canvas.gettags(item)[2]:  # check if mouse is over a node
+                            node_tag = self.canvas.gettags(item)[2]
+                            node_id = node_tag.split('-')[1]
+                            break
+                        else:
+                            node_id = None
+
+                    if (node_id != None and node_id != self.node1):
+
+                        # create blank list for inserting
+                        new_pipe = ['0' for _ in range(0, self.parent.model.pipe_col_count)]
+
+                        # get the next available unique pipe id
+                        cursor = self.parent.model.db.cursor()
+                        cursor.execute('SELECT max(id) FROM pipes')
+                        max_id = cursor.fetchall()
+
+                        if max_id[0][0] is None:
+                            new_pipe[0] = 1  # blank model, start id from 0
+                        else:
+                            new_pipe[0] = max_id[0][0] + 1  # pick next available id number
+
+                        self.node2 = node_id
+                        self.node2_tag = node_tag
+
+                        new_pipe[2] = self.node1
+                        new_pipe[3] = self.node2
+
+                        coords = self.canvas.coords(self.node2_tag)
+                        self.x2, self.y2 = (coords[0] + coords[2]) / 2, (coords[1] + coords[3]) / 2
+                        self.parent.drawing = False
+                        self.canvas.unbind('<Motion>')
+                        self.canvas.delete(self.cur_id)
+                        self.draw_line(f'p-{new_pipe[0]}', self.x1, self.y1, self.x2, self.y2)
+
+                        # insert new pipe into database
+                        new_pipe_sql = ', '.join(str(i) for i in new_pipe)
+                        cursor.execute(f'INSERT INTO pipes VALUES({new_pipe_sql})')
+                        self.parent.model.db.commit()
+                        cursor.close()
+                except:
+                    pass
+        elif self.parent.mode == 'pipe' and self.parent.draw_mode == 'delete':
+            try:
+                items = event.widget.find_overlapping(event.x, event.y, event.x, event.y)
+
+                # determine if a pipe is present
+                for item in items:
+                    if 'p-' in self.canvas.gettags(item)[2]:  # check if mouse is over a node
+                        pipe_tag = self.canvas.gettags(item)[2]
+                        pipe_id = pipe_tag.split('-')[1]
+                        break
+                    else:
+                        pipe_id = None
+
+                print(pipe_id)
+
+                if pipe_id != None:
+                    # delete pipe from canvas
+                    self.canvas.delete(pipe_tag)
+
+                    # delete pipe from database
+                    delete_pipe_sql = f'DELETE FROM pipes WHERE ID = {pipe_id}'
+                    self.parent.model.db.cursor().execute(delete_pipe_sql)
+                    self.parent.model.db.commit()
+                    self.parent.model.db.cursor().close()
+            except:
+                pass
         else:
             pass
 
     def draw_new_pipe(self, event):
-        x, y = event.x, event.y
-        if canvas.old_coord
+        try:
+            self.canvas.delete(self.cur_id)
+        except:
+            pass
+
+        self.cur_id = self.canvas.create_line(self.x1, self.y1, event.x, event.y)
 
 class MenuBar:
     def __init__(self, parent):
@@ -549,7 +640,7 @@ class MainApplication(tk.Frame):
         self.ribbon.add_pipe_button = Ribbon_Button(self.ribbon.frame, r'Blank.png', r'Blank.png', command=partial(self.change_mode, 'pipe', 'add'))
 
         self.ribbon.delete_pipe_button = Ribbon_Button(self.ribbon.frame, r'Blank.png', r'Blank.png',
-                                                    command=partial(self.change_mode, 'pipe', 'add'))
+                                                    command=partial(self.change_mode, 'pipe', 'delete'))
 
         self.ribbon.reconnect_pipe_button = Ribbon_Button(self.ribbon.frame, r'Blank.png', r'Blank.png',
                                                     command=partial(self.change_mode, 'pipe', 'reconnect'))
