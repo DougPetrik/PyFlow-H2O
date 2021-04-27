@@ -611,10 +611,6 @@ class MainApplication(tk.Frame):
         self.reportmenu = self.menubar.add_menu('Reports', commands=report_commands)
         self.helpmenu = self.menubar.add_menu('Help', commands=help_commands)
 
-        # create quick button menu for testing
-        #self.button = Button(self, 'hello')
-        #self.button.button.pack(side='left', anchor='nw')
-
         # create top ribbon
         self.ribbon = Ribbon(self, 32)
         self.ribbon.frame.pack(side='top', expand=False, fill='x')
