@@ -194,6 +194,7 @@ class Main(tk.Frame):
         self.pane_width = 250
         self.canvas_width = int(self.width) - self.pane_width
         self.height = read_config(config_parser, 'RESOLUTION', 'height')
+
         self.create()
 
 
@@ -215,6 +216,11 @@ class Main(tk.Frame):
 
         # add the side pane
         self.side_pane = tk.Frame(self.main_frame, width=self.pane_width, height=self.height, bg='white', highlightbackground='black', highlightthickness=1)
+
+        # pack the canvas and side pane
+        self.main_frame.pack(side='bottom', expand=True, fill='both')
+        self.canvas.pack(side='left', expand=True, fill='both')
+        self.side_pane.pack(side='right', expand=False, fill='both')
 
     def scroll_start(self, event):
         self.canvas.scan_mark(event.x, event.y)
@@ -409,6 +415,18 @@ class Main(tk.Frame):
 
         self.cur_id = self.canvas.create_line(self.x1, self.y1, event.x, event.y)
 
+class NodePage(tk.Frame):
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        self.controller = controller
+
+class PipePage(tk.Frame):
+
+    def __init__(self, parent, controller):
+        tk.Frame.__init__(self, parent)
+        self.controller = controller
+
 class MenuBar:
     def __init__(self, parent):
         ''' class to handle initialization of menubars '''
@@ -439,14 +457,57 @@ class TopFrame:
         self.frame = tk.Frame(self.parent.parent, width=self.width, height=self.height, bg='white')
 
 class Ribbon:
-    def __init__(self, parent, height):
+    def __init__(self, parent, height, ribbon_type):
         self.parent = parent
         self.width = read_config(config_parser, 'RESOLUTION', 'width')
         self.height = height
-        self.create()
-
-    def create(self):
+        self.ribbon_type = ribbon_type
         self.frame = tk.Frame(self.parent, width=self.width, height=self.height, bg='white', highlightthickness=0, bd=0)
+        self.frame.pack(side='top', expand=False, fill='x')
+        self.initUI()
+
+    def initUI(self):
+
+        if self.ribbon_type == 'buttons':
+            # add ribbon buttons
+            self.select_button = Ribbon_Button(self.frame, r'View.png', r'View_Select.png',
+                                                      command=partial(self.parent.change_mode, 'select', None))
+            # TODO: add query functionality
+            self.query_button = Ribbon_Button(self.frame, r'Query.png', r'Query_Select.png',
+                                                     command=None)
+
+            # add separator
+            self.add_separator(self.frame, height=self.height)
+
+            self.add_node_button = Ribbon_Button(self.frame, r'AddNode.png', r'AddNode_Select.png',
+                                                        command=partial(self.parent.change_mode, 'node', 'add'))
+            self.delete_node_button = Ribbon_Button(self.frame, r'DeleteNode.png', r'DeleteNode_Select.png',
+                                                           command=partial(self.parent.change_mode, 'node', 'delete'))
+            self.move_node_button = Ribbon_Button(self.frame, r'Blank.png', r'Blank.png',
+                                                         command=partial(self.parent.change_mode, 'node', 'move'))
+
+            # add separator
+            self.add_separator(self.frame, height=self.height)
+
+            self.add_pipe_button = Ribbon_Button(self.frame, r'Blank.png', r'Blank.png',
+                                                        command=partial(self.parent.change_mode, 'pipe', 'add'))
+
+            self.delete_pipe_button = Ribbon_Button(self.frame, r'Blank.png', r'Blank.png',
+                                                           command=partial(self.parent.change_mode, 'pipe', 'delete'))
+
+            self.reconnect_pipe_button = Ribbon_Button(self.frame, r'Blank.png', r'Blank.png',
+                                                              command=partial(self.parent.change_mode, 'pipe', 'reconnect'))
+        elif self.ribbon_type == 'text':
+            pass
+
+    def add_separator(self, frame, height):
+        # method to add a vertical separator of specified height to a frame
+        sep1 = tk.Frame(frame, width=8, height=height, bg='white')
+        sep1.pack(side='left', expand=False, fill='x')
+        sep2 = tk.Frame(frame, width=1, height=height, highlightbackground='black', highlightthickness=1, bg='white')
+        sep2.pack(side='left', expand=False, fill='x')
+        sep3 = tk.Frame(frame, width=8, height=height, bg='white')
+        sep3.pack(side='left', expand=False, fill='x')
 
 class Ribbon_Button:
     def __init__(self, parent, image_path, image_path_selected, command):
@@ -612,58 +673,27 @@ class MainApplication(tk.Frame):
         self.helpmenu = self.menubar.add_menu('Help', commands=help_commands)
 
         # create top ribbon
-        self.ribbon = Ribbon(self, 32)
-        self.ribbon.frame.pack(side='top', expand=False, fill='x')
-
-        # add ribbon buttons
-        self.ribbon.select_button = Ribbon_Button(self.ribbon.frame, r'View.png', r'View_Select.png',
-                                                    command=partial(self.change_mode, 'select', None))
-        # TODO: add query functionality
-        self.ribbon.query_button = Ribbon_Button(self.ribbon.frame, r'Query.png', r'Query_Select.png',
-                                                    command=None)
-
-        # add separator
-        self.add_separator(self.ribbon.frame, height=self.ribbon.height)
-
-        self.ribbon.add_node_button = Ribbon_Button(self.ribbon.frame, r'AddNode.png', r'AddNode_Select.png',
-                                                    command=partial(self.change_mode, 'node', 'add'))
-        self.ribbon.delete_node_button = Ribbon_Button(self.ribbon.frame, r'DeleteNode.png', r'DeleteNode_Select.png', command=partial(self.change_mode, 'node', 'delete'))
-        self.ribbon.move_node_button = Ribbon_Button(self.ribbon.frame, r'Blank.png', r'Blank.png', command=partial(self.change_mode, 'node', 'move'))
-
-        # add separator
-        self.add_separator(self.ribbon.frame, height=self.ribbon.height)
-
-        self.ribbon.add_pipe_button = Ribbon_Button(self.ribbon.frame, r'Blank.png', r'Blank.png', command=partial(self.change_mode, 'pipe', 'add'))
-
-        self.ribbon.delete_pipe_button = Ribbon_Button(self.ribbon.frame, r'Blank.png', r'Blank.png',
-                                                    command=partial(self.change_mode, 'pipe', 'delete'))
-
-        self.ribbon.reconnect_pipe_button = Ribbon_Button(self.ribbon.frame, r'Blank.png', r'Blank.png',
-                                                    command=partial(self.change_mode, 'pipe', 'reconnect'))
+        self.ribbon = Ribbon(self, 32, 'buttons')
 
         # create text ribbon
-        self.text_ribbon = Ribbon(self, 16)
-        self.text_ribbon.frame.pack(side='top', expand=False, fill='x')
+        self.text_ribbon = Ribbon(self, 16, 'text')
+        #self.text_ribbon.frame.pack(side='top', expand=False, fill='x')
 
         # create main frame
         self.main = Main(self)
-        self.main.main_frame.pack(side='bottom', expand=True, fill='both')
-        self.main.canvas.pack(side='left', expand=True, fill='both')
         #self.main.xsb.pack(expand=False, fill='both')
-        self.main.side_pane.pack(side='right', expand=False, fill='both')
+
+        # configure grid for side_pane
+        self.main.side_pane.grid_rowconfigure(0, weight=1)
+        self.main.side_pane.grid_columnconfigure(0, weight=1)
+
+        # configure the side pane pages
 
         # set default mode to select
         self.change_mode('select', None)
         self.drawing = False
 
-    def add_separator(self, frame, height):
-        # method to add a vertical separator of specified height to a frame
-        sep1 = tk.Frame(frame, width=8, height=height, bg='white')
-        sep1.pack(side='left', expand=False, fill='x')
-        sep2 = tk.Frame(frame, width=1, height=height, highlightbackground='black', highlightthickness=1, bg='white')
-        sep2.pack(side='left', expand=False, fill='x')
-        sep3 = tk.Frame(frame, width=8, height=height, bg='white')
-        sep3.pack(side='left', expand=False, fill='x')
+
 
 
 def on_closing():
