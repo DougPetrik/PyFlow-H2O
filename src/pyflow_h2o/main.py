@@ -222,6 +222,16 @@ class Main(tk.Frame):
         self.canvas.pack(side='left', expand=True, fill='both')
         self.side_pane.pack(side='right', expand=False, fill='both')
 
+        # configure grid for side_pane
+        self.side_pane.grid_rowconfigure(0, weight=1, pad=250)
+        self.side_pane.grid_columnconfigure(0, weight=1, pad=250)
+
+        self.side_pane.frames = {}
+        self.side_pane.frames['NodePage'] = NodePage(parent=self.side_pane, controller=self)
+        self.side_pane.frames['PipePage'] = PipePage(parent=self.side_pane, controller=self)
+        self.side_pane.frames['NodePage'].grid(row=0, column=0, sticky='nsew')
+        self.side_pane.frames['PipePage'].grid(row=0, column=0, sticky='nsew')
+
     def scroll_start(self, event):
         self.canvas.scan_mark(event.x, event.y)
 
@@ -418,8 +428,11 @@ class Main(tk.Frame):
 class NodePage(tk.Frame):
 
     def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent)
+        self.parent = parent
         self.controller = controller
+        #self.frame = tk.Frame(self.parent, width=250)
+        tk.Frame.__init__(self, parent)
+
 
 class PipePage(tk.Frame):
 
@@ -683,11 +696,8 @@ class MainApplication(tk.Frame):
         self.main = Main(self)
         #self.main.xsb.pack(expand=False, fill='both')
 
-        # configure grid for side_pane
-        self.main.side_pane.grid_rowconfigure(0, weight=1)
-        self.main.side_pane.grid_columnconfigure(0, weight=1)
-
         # configure the side pane pages
+
 
         # set default mode to select
         self.change_mode('select', None)
